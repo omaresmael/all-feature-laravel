@@ -27,7 +27,7 @@ class ReservationFactory extends Factory
             'user_id' => User::factory(),
             'office_id' => Office::factory(),
             'price' => $this->faker->numberBetween(10000,20000),
-            'status' => 1,
+            'status' => Reservation::STATUS_ACTIVE,
             'start_date' => now()->addDays(1)->format('Y-m-d'),
             'end_date' => now()->addDays(5)->format('Y-m-d'),
 
