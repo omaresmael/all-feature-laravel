@@ -5,8 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Resources\OfficeResource;
 use App\Models\Office;
 use App\Models\Reservation;
+use App\Models\Validators\OfficeValidator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class OfficeController extends Controller
 {
@@ -38,5 +43,57 @@ class OfficeController extends Controller
             ->load(['tags','images','user']);
 
         return OfficeResource::make($office);
+    }
+
+    public function create()
+    {
+
+        if(!auth()->user()->tokenCan('office.create'))
+            abort(Response::HTTP_FORBIDDEN);
+        $office = new Office();
+        $attributes = (new OfficeValidator())->validate($office,request()->all());
+
+        $attributes['user_id'] = auth()->id();
+        $attributes['approval_status'] = Office::APPROVAL_PENDING;
+
+        $office = DB::transaction(function() use ($office,$attributes) {
+            $office->fill(
+                Arr::except($attributes,['tags'])
+            )->save();
+            if(isset($attributes['tags']))
+            {
+                $office->tags()->sync($attributes['tags']);
+            }
+
+            return $office;
+        });
+
+        return OfficeResource::make(
+            $office->load(['tags','images','user'])
+        );
+    }
+    public function update(Office $office)
+    {
+        if(!auth()->user()->tokenCan('office.update'))
+            abort(Response::HTTP_FORBIDDEN);
+        $this->authorize('update',$office);
+        $attributes = (new OfficeValidator())->validate($office,request()->all());
+        $attributes['user_id'] = auth()->id();
+        $attributes['approval_status'] = Office::APPROVAL_PENDING;
+
+        DB::transaction(function() use ($attributes,$office) {
+             $office->update(
+                Arr::except($attributes,['tags'])
+            );
+             if(isset($attributes['tags']))
+             {
+                 $office->tags()->sync($attributes['tags']);
+             }
+
+
+        });
+        return OfficeResource::make(
+            $office->load(['tags','images','user'])
+        );
     }
 }

@@ -38,8 +38,8 @@ class OfficeControllerTest extends TestCase
         Office::factory(2)->create();
         Office::factory()->create(['hidden'=>true]);
         Office::factory()->create(['approval_status'=>Office::APPROVAL_PENDING]);
+
         $response = $this->get('/api/offices');
-        $response->dump();
         $response->assertJsonCount(2,'data');
     }
 
@@ -136,7 +136,7 @@ user */
         ]);
 
         $response = $this->get('/api/offices?lat=38.720661384644046&lng=-9.16044783453807');
-        $response->dump();
+
         $this->assertEquals('near Office',$response->json('data')[0]['title']);
         $this->assertEquals('far Office',$response->json('data')[1]['title']);
     }
@@ -160,10 +160,115 @@ user */
         $response = $this->get('/api/offices/'.$office->id);
         $response->assertOk();
 
-        $response->dump();
+
         $this->assertIsArray($response->json('data')['images']);
         $this->assertIsArray($response->json('data')['tags']);
         $this->assertEquals($response->json('data')['user']['id'],$user->id);
+
+
+    }
+
+    /**
+    @test
+     **/
+    public function itCreatesOffice()
+    {
+        $user = User::factory()->createQuietly();
+        $tag = Tag::factory()->create();
+        $tag2 = Tag::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->postJson('api/offices',[
+            'title' => 'Office in libia',
+            'description' => 'test',
+            'lat' => '9.2365845425',
+            'lng' => '-2.365814968',
+            'address_line1' => 'address',
+            'price_per_day' => 10000,
+            'monthly_discount' => 5,
+            'tags' => [
+                $tag->id,
+                $tag2->id,
+            ]
+        ]);
+
+        $response->assertCreated()
+        ->assertJsonPath('data.title','Office in libia')
+        ->assertJsonPath('data.approval_status',Office::APPROVAL_PENDING)
+        ->assertJsonPath('data.user.id',$user->id)
+        ->assertJsonCount(2,'data.tags');
+
+        $this->assertDatabaseHas('offices',[
+            'title' => 'Office in libia'
+        ]);
+
+    }
+
+    /**
+    @test
+     **/
+    public function itDoesntAllowCreatingIfScopeNotProvided()
+    {
+        $user = User::factory()->createQuietly();
+        $token = $user->createToken('test', []);
+
+        $response = $this->postJson('api/offices',[],[
+            'Authorization' => 'Bearer '.$token->plainTextToken
+        ]);
+        $response->assertStatus(403);
+
+    }
+
+    /**
+    @test
+     **/
+    public function itUpdatesOffice()
+    {
+        $user = User::factory()->createQuietly();
+        $tags = Tag::factory(2)->create();
+        $anotherTag = Tag::factory()->create();
+        $office = Office::factory()->for($user)->create();
+        $office->tags()->attach($tags);
+
+        $this->actingAs($user);
+
+        $response = $this->putJson('api/offices/'.$office->id,[
+            'title' => 'Office in libia',
+            'tags' => [$tags[0]->id,$anotherTag->id],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.title','Office in libia')
+            ->assertJsonPath('data.approval_status',Office::APPROVAL_PENDING)
+            ->assertJsonPath('data.tags.0.id',$tags[0]->id)
+            ->assertJsonPath('data.tags.1.id',$anotherTag->id);
+
+
+
+
+    }
+    /**
+    @test
+     **/
+    public function itDoesntUpdateOfficeThatDoesntBelongToUser()
+    {
+        $user = User::factory()->createQuietly();
+        $anotherUser = User::factory()->createQuietly();
+        $tags = Tag::factory(2)->create();
+        $office = Office::factory()->for($anotherUser)->create();
+        $office->tags()->attach($tags);
+
+        $this->actingAs($user);
+
+        $response = $this->putJson('api/offices/'.$office->id,[
+            'title' => 'Office in libia',
+
+        ]);
+
+        $response->assertStatus(403);
+
+
+
 
 
     }
