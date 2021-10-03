@@ -59,7 +59,6 @@ class OfficeControllerTest extends TestCase
         Office::factory()->for($user)->create(['approval_status'=>Office::APPROVAL_PENDING]);
         $this->actingAs($user);
         $response = $this->get('/api/offices/?user_id='.$user->id);
-
         $response->assertJsonCount(5,'data');
     }
 
@@ -274,6 +273,31 @@ user */
 
 
     }
+
+    /**
+    @test
+     **/
+    public function itUpdatesFeaturedImageForOffice()
+    {
+        $user = User::factory()->createQuietly();
+        $tags = Tag::factory(2)->create();
+        $anotherTag = Tag::factory()->create();
+        $office = Office::factory()->for($user)->create();
+        $office->tags()->attach($tags);
+
+        $image = $office->images()->create([
+            'path' => 'image.jpg'
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->putJson('api/offices/'.$office->id,[
+            'featured_image_id' => $image->id,
+        ]);
+
+        $response->assertOk()
+        ->assertJsonPath('data.featured_image_id',$image->id);
+    }
     /**
     @test
      **/
@@ -376,4 +400,6 @@ user */
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
     }
+
+
 }

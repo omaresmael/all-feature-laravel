@@ -31,6 +31,11 @@ class Office extends Model
        return $this->belongsTo(User::class);
     }
 
+    public function featured_image(): BelongsTo
+    {
+        return $this->belongsTo(Image::class, 'featured_image_id');
+    }
+
     public function reservations(): HasMany
     {
         return $this->HasMany(Reservation::class);
