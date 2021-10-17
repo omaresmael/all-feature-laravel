@@ -20,7 +20,7 @@ class OfficeImageControllerTest extends TestCase
 
     public function itStoresImageForOffice()
     {
-        Storage::fake('public');
+        Storage::fake();
         $user = User::factory()->create();
         $this->actingAs($user);
         $office = Office::factory()->for($user)->create();
@@ -30,7 +30,7 @@ class OfficeImageControllerTest extends TestCase
         ]);
 
         $response->assertCreated();
-        Storage::disk('public')->assertExists(
+        Storage::assertExists(
             $response->json('data.path')
         );
 
@@ -41,9 +41,7 @@ class OfficeImageControllerTest extends TestCase
      **/
     public function itDeletesImage()
     {
-        Storage::disk('public')->put('/office_image.jpg','empty');
-
-
+        Storage::put('/office_image.jpg','empty');
 
         $user = User::factory()->createQuietly();
 
@@ -63,7 +61,7 @@ class OfficeImageControllerTest extends TestCase
         $response->assertOk();
         $this->assertModelMissing($image2);
 
-        Storage::disk('public')->assertMissing('office_image.jpg');
+        Storage::assertMissing('office_image.jpg');
 
 
     }
@@ -73,7 +71,7 @@ class OfficeImageControllerTest extends TestCase
      **/
     public function itDoesntDeleteTheOnlyImage()
     {
-        Storage::disk('public')->put('/office_image.jpg','empty');
+        Storage::put('/office_image.jpg','empty');
 
 
 
@@ -104,7 +102,7 @@ class OfficeImageControllerTest extends TestCase
      **/
     public function itDoesntDeleteTheFeaturedImage()
     {
-        Storage::disk('public')->put('/office_image.jpg','empty');
+        Storage::put('/office_image.jpg','empty');
 
 
 
@@ -140,7 +138,7 @@ class OfficeImageControllerTest extends TestCase
      **/
     public function itDoesntDeleteImageRelatedToAnotherOffice()
     {
-        Storage::disk('public')->put('/office_image.jpg','empty');
+        Storage::put('/office_image.jpg','empty');
 
 
 
@@ -161,8 +159,7 @@ class OfficeImageControllerTest extends TestCase
 
         $response = $this->deleteJson('/api/offices/'.$office->id.'/images/'.$image2->id);
 
-        $response->assertUnprocessable();
-        $response->assertJsonValidationErrors(['images' => 'Cannot delete the image']);
+        $response->assertNotFound();
 
     }
 }

@@ -25,7 +25,7 @@ class OfficeImageController extends Controller
          request()->validate([
              'image' => ['file','max:5000','mimes:jpg,png']
          ]);
-         $path = request()->file('image')->storePublicly('/', ['disk' => 'public']);
+         $path = request()->file('image')->storePublicly('/');
 
          $image = $office->images()->create([
              'path' => $path
@@ -40,13 +40,6 @@ class OfficeImageController extends Controller
 
         $this->authorize('update',$office);
 
-
-        throw_if(
-
-            $image->resource_type != 'office' || $image->resource_id != $office->id,
-            ValidationException::withMessages(['images' => 'Cannot delete the image'])
-        );
-
         throw_if(
 
             $office->images()->count() == 1,
@@ -57,7 +50,7 @@ class OfficeImageController extends Controller
             $office->featured_image_id == $image->id,
             ValidationException::withMessages(['images' => 'Cannot delete the featured image'])
         );
-        Storage::disk('public')->delete($image->path);
+        Storage::delete($image->path);
         $image->delete();
     }
 }

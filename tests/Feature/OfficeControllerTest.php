@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\WithFaker;
 
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class OfficeControllerTest extends TestCase
@@ -365,6 +366,7 @@ user */
      **/
     public function itDeletesOffices()
     {
+        Storage::disk('public')->put('/office_image.jpg','empty');
 
         $user = User::factory()->createQuietly();
 
@@ -372,11 +374,20 @@ user */
         $office = Office::factory()->for($user)->create();
         $office->tags()->attach($tags);
 
+        $image = $office->images()->create([
+            'path' => 'featured image.png',
+
+        ]);
+
         $this->actingAs($user);
 
         $response = $this->deleteJson('api/offices/'.$office->id);
 
-        $response->assertStatus(200);
+        $response->assertOk();
+        $this->assertSoftDeleted($office);
+        $this->assertModelMissing($image);
+
+        Storage::assertMissing('featured image.png');
 
     }
 
